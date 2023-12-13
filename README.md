@@ -20,22 +20,18 @@
 installed ansible cmdb:
 
 Step 1: Download Ansible-CMDB: 
-# su - root 
-Make sure your ansible system having the internet connectivity
-# cd /opt
-# wget https://github.com/fboender/ansible-cmdb/releases/download/1.30/ansible-cmdb-1.30.zip -O ansible-cmdb-1.30.zip
+**su - root**
+**cd /opt**
+**wget https://github.com/fboender/ansible-cmdb/releases/download/1.30/ansible-cmdb-1.30.zip -O ansible-cmdb-1.30.zip**
 
 Step 2: Install Ansible-CMDB:
-# unzip ansible-cmdb-1.30.zip
-# cd ansible-cmdb-1.30
-# yum install python-pip -y
+**unzip ansible-cmdb-1.30.zip**
+**cd ansible-cmdb-1.30**
+**pip install ansible-cmdb --break-system-packages -->install**
 
-# pip install ansible-cmdb --break-system-packages -->install
+Referred to the GitHub ReadMe from [here](https://github.com/fboender/ansible-cmdb/tree/1.31) & entered as ansible user and created out directory
 
-referred to the GitHub ReadMe from [here](https://github.com/fboender/ansible-cmdb/tree/1.31)
-entered as ansible user and created out directory
-
-ansible -m setup --tree out/ all 
+**ansible -m setup --tree out/ all**
 for sending the nodes conf into out dir
 
 - ansible-cmdb out/ >  all_hosts.html
