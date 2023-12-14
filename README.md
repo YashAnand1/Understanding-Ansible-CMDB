@@ -12,7 +12,7 @@
 - [ANSIBLE-CMDB Use Case](https://www.reddit.com/r/ansible/comments/7op6wq/what_configuration_management_tool/)
 - [Push & Pull in Config Man](https://gayatrisajith.medium.com/beginner-fundamentals-push-pull-configuration-management-tools-85eff1b41447)
 
-# Setting up servers
+# Understanding Ansible - The Prerequisites
 - We create 2 VMs // not per my req
 - download package using wget & then install ansible server'spackage
 - epel = extra paxkages for enterprise linux 
