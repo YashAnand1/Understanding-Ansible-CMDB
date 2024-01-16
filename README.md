@@ -1,11 +1,10 @@
-------------------------------------------------
 <div align = "center">
 
 Ansible-CMDB
 
 </div>
  
-#References
+# References
 - [ANSIBLE-CMDB Docs](https://ansible-cmdb.readthedocs.io/en/latest/usage/) 
 - [ANSIBLE-CMDB README](https://github.com/fboender/ansible-cmdb/tree/1.31)
 - [ANSIBLE-CMDB Use Case](https://www.reddit.com/r/ansible/comments/7op6wq/what_configuration_management_tool/)
