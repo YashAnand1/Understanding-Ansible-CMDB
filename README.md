@@ -1,15 +1,115 @@
-
+------------------------------------------------
 <div align = "center">
 
 # Ansible-CMDB
 
 </div>
  
-# References
+#References
 - [ANSIBLE-CMDB Docs](https://ansible-cmdb.readthedocs.io/en/latest/usage/) 
 - [ANSIBLE-CMDB README](https://github.com/fboender/ansible-cmdb/tree/1.31)
 - [ANSIBLE-CMDB Use Case](https://www.reddit.com/r/ansible/comments/7op6wq/what_configuration_management_tool/)
 - [Push & Pull in Config Man](https://gayatrisajith.medium.com/beginner-fundamentals-push-pull-configuration-management-tools-85eff1b41447)
+
+# Setting up servers
+- We create 2 VMs // not per my req
+- download package using wget & then install ansible server'spackage
+- epel = extra paxkages for enterprise linux 
+- To create shahee paneer/a dish we bought the ingredients by installing the main ingredient/paneer/ansible
+- we need to install other dependencies/components to create a dish - these dishes are part of the package
+- How will ansible server know what nodes are connected with it - what nodes it has to send updates to
+- In ansible server, find ivnentory file/host default file, enter pvt ip of nodes for saving it to let server know who it is connected with "vi /etc/ansible/hosts"
+- Inside the file, create a "demoByYash group" and paste node1 & 2 pvt ip
+- another file in ansible: config file where commands are written but //ed, remove // before inventory & inventory file activated! also remove // before sudo-user = root (this allows future's ansible user to have the right privelege
+
+- connection still not established b/w nodes & ansible server - we create 3 ansible users in the nodes as root user won't be known for each node practically
+- "adduser user/ansible" in 3 servers, setting passwords using "passwd user/ansible"
+- switching users in servers with switch user with su - ansible
+- giving root privelege to ansible by editing visudo file, add:
+ansible ALL=(ALL) NOPASSWD:ALL
+- STILL have to write commands w/ sudo since you are not root user - ansible user is only a sudo user not root user
+- NO communication b/w servers through ssh, come bacck to ansible server and we need to install ssh 
+- make changes to /etc/ssh/sshd_config & node 1 and node 2 should be allowed to connect
+- create the connection in the server by creating 
+- sudo apt-get install ansible
+got erro "sudo ansible --version
+ERROR: Ansible requires the locale encoding to be UTF-8; Detected ISO8859-1." after installing
+solved by https://www.reddit.com/r/ansible/comments/z66t0l/comment/jwenrji/?utm_source=share&utm_medium=web2x&context=3 adding following to .bashrc:
+```
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
+```
+
+- work as an ansible user and create necessary 
+- ansible --version shows "config file = /etc/ansible/ansible.cfg" 
+- the hosts file will not work until we make chanes to ansible.cfg
+
+- nano /etc/ansible/hosts
+created a group including my vm called "demoByYash" using:
+[demoByYash]
+192.168.122.128
+
+- vi /etc/ansible/ansible.cfg and uncommented "$ ansible-config init --disabled > ansible.cfg"
+
+- there are only 2 files in /etc/ansible. my ansible.cfg says:
+```
+# Since Ansible 2.12 (core):
+# To generate an example config file (a "disabled" one with all default settings, commented out):
+#               $ ansible-config init --disabled > ansible.cfg
+#
+# Also you can now have a more complete file by including existing plugins:
+# ansible-config init --disabled -t all > ansible.cfg
+
+# For previous versions of Ansible you can check for examples in the 'stable' branches of each version
+# Note that this file was always incomplete  and lagging changes to configuration settings
+
+# for example, for 2.9: https://github.com/ansible/ansible/blob/stable-2.9/examples/ansible.cfg
+```
+so i ran ansible-config init --disabled -t all > ansible.cfg
+
+- adduser ansible in both machines
+
+- su - ansible for switching to the new user
+
+- i got an error when trying to test install httpd "sudo apt install httpd
+[sudo] password for ansible: 
+ansible is not in the sudoers file.
+This incident has been reported to the administrator."
+
+- to create it same as root user, i logged out of ansible user on BOTH SERVERS and ran "visudo", under the "allow root to run any commands anywhere", I addded the following:
+```
+ansible ALL=(ALL)   NOPASSWD: ALL
+```
+
+- Trust relationship: root w/ root & sser
+
+- TO CHECK if connection has been established b/w node & server, come to server and run su - ansible and establish ssh between the 2 USERS
+
+- when i ran ssh 192.168.122.128, i was able to connect with the node from my server
+
+optional i think:
+- changes made to /etc/ssh/sshd_config in both servers:
+1. added this line: PermitRootLogin yes
+2. uncommented PasswordAuthentication yes
+3. outside of the file ran service sshd restart
+
+- to verify the connection, turn ansible user first, establish ssh connection
+
+- if i had another node, i'd have to connect to 2nd node from main server again - since i have to enter password again and again while trying to establish connection with ssh, I have to remove password authentication - not practical since we have to update 100s of server, automation with password is not feasible
+
+- solution, we gen a key inside ansible server using ssh-keygen, one pub and one pvt, it is imp to be signed in as same level user in all servers - when creating trust relation, you need gen ssh-keygen seen using ls -a
+
+- inside .ssh i'd see id_rsa and id_rsa_pub and when you connect using ansible@ip again, you'll be asked to enter passwd first only - 
+
+- inside the server, add the public key on the node so that node always knows that the server is authenticate - everything to be done as an ansible user 
+
+- first in server, run "ssh-keygen" - do ls -a and you'll find .ssh, inside is id_rsa and id_rsa.pub, copy the public key
+
+- to copy public key to node, we run "ssh-copy-id ansible@192.168.122.12 - for the last time passwd is asked and once done, connection will be set w/o passwd
+
+- in the nodes server, ~/.ssh/authorized_keys get created and the
+id_rsa.pub is added form the server - automatically after running ssh-copy-id on the server
 
 # Ansible-CMDB Intro
 
@@ -432,28 +532,56 @@ Now the output of running `ansible-cmdb -t txt_table ansible/` is as follows:
 |       |     |        |           |                        |                   |          |192.168.122.6    |Ubuntu 23.04 | 192.168.122.6    |52:54:00:80:60:d6  |x86_64/x86_64  |3g   |1g       |2g       |2     |kvm/guest  |5.6g, 5.6g|          
 ```
 
-With the primary columns present in the output, I could simply add the new columns from this template to the `csv.tpl` or create a new custom template and referring its absolute path. To add specific data columns from the Ansible-Output file, I first listed the columns that were common with our Inventory:
+With the primary columns present in the output, I could simply add the new columns from this template to the `csv.tpl` or create a new custom template and referring its absolute path. To add specific data columns from the Ansible-Output file, I first listed the columns that were common with our Inventory and added them into this [Common-Columns Spreadsheet](https://docs.google.com/spreadsheets/d/1c8-KJ2-Nz4_dlwONRyq-JtToTQrJiy2gwPiGwSYIkrc/edit#gid=0). 
+
+The newly created 'ims.tpl' Ansible-CMDB template file that is stored in /usr/local/lib/ansiblecmdb/data/tpl directory now has some of the columns provided below included. Request the complete access of the template if needed.
 ```
-HOSTNAME
-IP
-CPU
-RAM
-MemUsed_GB
-FREE_RAM_GB
-SwapFree_GB
-SwapTotal_GB
-WORKER_NODE_INTERNAL_IP (Private)
-LOG_PATH
-MAC_ADD
-NETMASK
-OS
-OS_VERSION
-KERNEL_VERSION
-GATEWAY
-WWN_STORAGE
-WWN_NAME
-WWIN
-LOCAL_DISK_GB
-DISK_AVAILABLE_GB
-LOCAL_DISK_PARTITION
+ {"title": "PRIMARY",    "id": "manual",       "visible": True, "field": lambda h: h.get(' ', '')},
+  {"title": "SL",         "id": "manual",        "visible": True, "field": lambda h: h.get(' ', '')},
+  {"title": "CLIENT",     "id": "manual",    "visible": True, "field": lambda h: h.get(' ', '')},
+  {"title": "PROJECT",    "id": "manual",   "visible": True, "field": lambda h: h.get(' ', '')},
+  {"title": "APPLICATION_ENVIRONMENT",       "manual": "APPLICATION_ENVIRONMENT",       "visible": True, "field": lambda h: h.get(' ', '')},
+  {"title": "SETUP_ENVIRONMENT",       "id": "manual",       "visible": True, "field": lambda h: h.get(' ', '')},
+  {"title": "LOCATION",   "id": "manual",       "visible": True, "field": lambda h: h.get(' ', '')},
+  {"title": "HOSTNAME",       "id": "name",       "visible": True, "field": lambda h: h.get('name', '')},
+  {"title": "IP",         "id": "ip",         "visible": True, "field": lambda h: host['ansible_facts'].get('ansible_default_ipv4', {}).get('address', '')},
+  {"title": "CPU",       "id": "cpus",       "visible": True, "field": lambda h: str(host['ansible_facts'].get('ansible_processor_count', 0))},
+  {"title": "RAM",        "id": "mem",        "visible": True, "field": lambda h: '%0.0fg' % (int(host['ansible_facts'].get('ansible_memtotal_mb', 0)) / 1000.0)},
+  {"title": "MemUsed",    "id": "memused",    "visible": True, "field": lambda h: '%0.0fg' % (int(host['ansible_facts'].get('ansible_memory_mb', {}).get('real', {}).get('used',0)) / 1000.0)},
+  {"title": "FREERAM",    "id": "memfree",    "visible": True, "field": lambda h: '%0.0fg' % (int(host['ansible_facts'].get('ansible_memfree_mb', 0)) / 1000.0)},
+  {"title": "SwapFree",  "id": "swapfree",  "visible": True, "field": lambda h: '%0.0fg' % (int(host['ansible_facts'].get('ansible_swapfree_mb', 0)) / 1000.0)},
+  {"title": "SwapTotal",  "id": "swaptotal",  "visible": True, "field": lambda h: '%0.0fg' % (int(host['ansible_facts'].get('ansible_swaptotal_mb', 0)) / 1000.0)},
+  {"title": "TYPE",       "id": "virt",       "visible": True, "field": lambda h: host['ansible_facts'].get('ansible_virtualization_type', 'Unk') + '/' + host['ansible_facts'].get('ansible_virtualization_role', 'Unk')},
+  {"title": "WORKER_NODE_INTERNAL_IP",    "id": "manual",       "visible": True, "field": lambda h: h.get(' ', '')},
+  {"title": "OWNER_CONCTACT_DETAIL",    "id": "manual",       "visible": True, "field": lambda h: h.get(' ', '')},
+...
 ```
+
+## Adding Missing Columns To Ansible-CMDB
+For adding the data of columns that are missing from the original Ansible-Data, I followed the [Custom-Facts](https://ansible-cmdb.readthedocs.io/en/stable/usage/#custom-facts) section of the Ansible Document and followed these steps:
+- Created a new directory out_extend in addition to original ansible/ 
+- Stored custom-fact file with the following content:
+```
+{
+  "custom_facts": {
+    "software": {
+      "apache": {
+        "version": "2.4",
+        "install_src": "backport_deb"
+      },
+      "mysql-server": {
+        "version": "5.5",
+        "install_src": "manual_compile"
+      },
+      "redis": {
+        "version": "3.0.7",
+        "install_src": "manual_compile"
+      }
+    }
+  }
+}
+```
+- ansible-cmdb ansible/ out_extend/ > overview.html which showed all of the data mentioned under the 'Custom Facts' header.
+![img](https://i.imgur.com/qLRGQVM.png)
+
+Now I need to understand how to add remaining columns using Playbooks 
