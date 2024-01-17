@@ -1,7 +1,6 @@
 <div align = "center">
 
 Ansible-CMDB
-
 </div>
  
 # References
