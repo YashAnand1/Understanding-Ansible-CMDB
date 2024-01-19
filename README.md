@@ -39,6 +39,9 @@ Step 2: Install Ansible-CMDB:
 
 # Ansible-CMDB Demonstration 
 ## Viewing all configurations as HTML
+
+> Whenever you run an Ansible playbook, the first thing that happens is the setup task. This task gathers a whole host of facts about the remote machine(s) — IP addresses, disks, OS version… you name it. Ansible refers to these as “facts”.
+
 - `mkdir ansible` --> `cd ansible` --> `mkdir out`
 - `ansible -m setup --tree ~/ansible/out/ all` for sending the nodes conf into out direction
 - It is also possible to run as a specific user: `
@@ -247,7 +250,7 @@ $ vi out_manual/win.dev.local
 ```
 
 ## Custom Facts 
-custom facts added will be displayed under 'custom facts' header in html fancy. Not same as host local facts which are read by ansible from /etc/ansible/facts.d directory. custom facts explained here are manually defined on the host where you run ansible-cmdb, and have little to do with Ansible itself.
+> custom facts added will be displayed under 'custom facts' header in html fancy. Not same as host local facts which are read by ansible from /etc/ansible/facts.d directory. custom facts explained here are manually defined on the host where you run ansible-cmdb, and have little to do with Ansible itself.
 
 UseCase: 
 Let's say you want to add information about installed software to your facts.
@@ -285,14 +288,15 @@ Generate the overview:
 ```
 ./ansible-cmdb out/ out_custom/ > overview.html
 ```
-
--------------------------------
+____________
 
 # Bash Scripting For Ansible-CMDB
 
 ## Reference
 [YouTube Tutorial](https://www.youtube.com/watch?v=PPQ8m8xQAs8&ab_channel=NullByte)
 
+_______
+ 
 ## Introduction
 
 - which bash
@@ -345,6 +349,8 @@ alias whatismyipaddress="echo $(ifconfig | grep "broadcast" | awk '{print $2}')"
 
 When running `whatismyipaddress`, the second argument will only be displayed without running the entire command
 
+_______________
+
 ## Ansible-CMDB CSV Script
 ```
 #! /bin/bash
@@ -363,6 +369,8 @@ ansible -m setup --tree $factpath $group
 
 ansible-cmdb $factpath > $csvname
 ```
+
+______________________________________________
 
 ## How Ansible-CMDB Adds Columns In Templates
 
@@ -404,6 +412,8 @@ In the above default template that is used for displaying tables:
 - "field": lambda h: h.get('name', ''): 
 - - Field is the value that is being used for adding values by making  parameter h (for ANSIBLE output file!) get value related to id 'name' from host (ANSIBLE output file saved in out/). 
 - - If 'name' not present, empty string is shown as value.
+
+___________________________________________________
 
 ## Adding Columns To Ansible-CMDB
 **To add more columns from the Ansible-Output file, I will need to add it in the ID field and value in h.get**
@@ -456,8 +466,14 @@ The newly created 'ims.tpl' Ansible-CMDB template file that is stored in /usr/lo
   {"title": "OWNER_CONCTACT_DETAIL",    "id": "manual",       "visible": True, "field": lambda h: h.get(' ', '')},
 ...
 ```
+_________________________________________
 
-## Adding Missing Columns To Ansible-CMDB
+## Adding Missing Columns To Ansible-CMDB MANUALLY
+
+> Strictly from Ansible-CMDB Document | [Reference](https://ansible-cmdb.readthedocs.io/en/latest/usage/#custom-facts)
+
+>> Note that these are not the same as Host local facts. Host local facts are facts that Ansible reads from each of your host's /etc/ansible/facts.d directory. Those are also included in Ansible-cmdb's html_fancy templates, but under the "Host local facts" heading. **The custom facts explained here are manually defined on the host where you run ansible-cmdb, and have little to do with Ansible itself.**
+
 For adding the data of columns that are missing from the original Ansible-Data, I followed the [Custom-Facts](https://ansible-cmdb.readthedocs.io/en/stable/usage/#custom-facts) section of the Ansible Document and followed these steps:
 - Created a new directory out_extend in addition to original ansible/ 
 - Stored custom-fact file with the following content:
@@ -481,7 +497,178 @@ For adding the data of columns that are missing from the original Ansible-Data, 
   }
 }
 ```
-- ansible-cmdb ansible/ out_extend/ > overview.html which showed all of the data mentioned under the 'Custom Facts' header.
+- `ansible-cmdb ansible/ out_extend/ > overview.html` which showed all of the data mentioned under the 'Custom Facts' header.
 ![img](https://i.imgur.com/qLRGQVM.png)
 
-Now I need to understand how to add remaining columns using Playbooks 
+__________________________________________________
+
+## Adding Missing Columns To Ansible-CMDB [USING ANSIBLE CUSTOM FACTS]
+
+Now I need to understand how to add remaining columns using Playbooks. References used:
+- [ServerAsCode Article on 'Ansible Custom Facts'](https://serverascode.com/2015/01/27/ansible-custom-facts.html)
+- [Tutorial on 'How To Create and Manage Ansible Custom Facts'](https://www.youtube.com/watch?v=S6sx59-ShYU&pp=ygUUYW5zaWJsZSBjdXN0b20gZmFjdHM%3D)
+- [Tutorial on 'How to create and fetch custom facts in ansible?'](https://www.youtube.com/watch?v=EbfdWcNJoGc&pp=ygUUYW5zaWJsZSBjdXN0b20gZmFjdHM%3D)
+- [Medium Article on 'Ansible custom facts'](https://medium.com/@jezhalford/ansible-custom-facts-1e1d1bf65db8)
+- [Tekneed Article on 'Managing Ansible Facts & Creating Ansible Custom Facts'](https://tekneed.com/managing-ansible-facts-creating-ansible-custom-facts/)
+- [Medium Article on 'Custom Facts For Ansible'](https://medium.com/opsops/custom-facts-for-ansible-ade5f78d6d94)
+-[LinuxTechi Article on 'Create Custom-Facts In Ansible](https://www.linuxtechi.com/create-use-custom-facts-in-ansible/)
+- [ZippyOPS Article on 'Ansible Custom facts'](https://www.zippyops.com/custom-facts#:~:text=Setting%20up%20custom%20facts%20automatically&text=fact%20files%20on%20each%20remote,can%20be%20used%20in%20playbooks.)
+
+>  Host local facts are facts that Ansible reads from each of your host's /etc/ansible/facts.d directory. Those are also included in Ansible-cmdb's html_fancy templates, but under the "Host local facts" heading.
+
+- **There are two types of custom facts: data and code.** Data is just read from a file, and code is executed and its output is accepted as data.
+
+> Both facts lives in /etc/ansible/facts.d/ directory on the target machine not a controller, both have extension of .fact (example: /etc/ansible/facts.d/date.fact).
+
+-  FIle has execution permission = code, not execution permission = data. Output of both facts is JSON & stored under ansible_local key
+
+### 1. The process of creating MANUAL custom facts include:
+Basic steps are as follows:
+```
+- moving to the server host machines
+- mkdir -p /etc/ansible/facts.d
+- vim /etc/ansible/facts.d/httpd.fact // Fact extension important
+'''
+# use ini syntax instead of yaml
+[basic]
+package=httpd
+service=httpd
+state=started
+enabled=true
+abcd=xyz
+'''
+
+- Go to control node or main machine, check if this fact now exists:
+'''
+ansible <host> -m setup | less
+'''
+```
+Automating the above process through an ansible-playbook:
+
+1. Creating a playbook that creates the facts.d directory
+I first created the following playbook for creating this directory:
+```
+---
+- hosts: mygroup
+  user: ansible
+  become: yes
+  tasks:
+    - name: creating the facts.d directory
+      action: command mkdir -p /etc/ansible/facts.d
+...
+```
+
+I verified its creation by running `ansible mygroup -m command -b -a "ls /etc/ansible/facts.d/"
+
+2.  To create a custom-facts file called httpd.facts in the directory that was just created, I appended a new task into the prev playbook (I could also create a separate playbook for this task):
+```
+---
+- hosts: mygroup
+  user: ansible
+  become: yes
+  tasks:
+    - name: creating the facts.d directory
+      action: command mkdir -p /etc/ansible/facts.d
+    - template:
+        src: /etc/ansible/playbooks/httpdtxt
+        dest: /etc/ansible/facts.d/httpd.fact
+...
+```
+I verified the creation of the file by running `ansible mygroup -m command -a "cat /etc/ansible/facts.d/httpd.fact"`:
+```
+192.168.122.159 | CHANGED | rc=0 >>
+[basic]
+package=httpd
+service=httpd
+state=started
+enabled=true
+192.168.122.6 | CHANGED | rc=0 >>
+[basic]
+package=httpd
+service=httpd
+state=started
+enabled=true
+```
+
+3. Retrieving custom facts using `ansible mygroup -m setup | less` and `/ansible_local` did not display the manually added httpd facts because I created the file `httpd.facts` instead of `httpd.fact`. Upon correcting I saw the following under `ansible_local` key:
+```
+        "ansible_local": {
+            "httpd": "error loading facts as JSON or ini - please check content: /etc/ansible/facts.d/httpd.fact"
+        },
+```
+
+To fix this, I opened the file `httpd.fact` again and removed "```" at the last line that had been added by mistake. After running the `ansible mygroup -m setup | less` command again, I was able to retrieve the custom fact:
+```
+        "ansible_local": {
+            "httpd": {
+                "basic": {
+                    "enabled": "true",
+                    "package": "httpd",
+                    "service": "httpd",
+                    "state": "started"
+                }
+            }
+        },
+```
+
+### 1.1 Adding custom-facts for Project/Client Details & Converting To CSV
+
+i> Creating the custom-fact file for copying to nodes:
+```
+[BASIC]
+CLIENT=NIC
+PROJECT=Shiksha_Portal
+DATA_CENTER=DC-Delhi
+OWNER_CONCTACT_DETAIL=Mr. Ashwani Kumar ashwani.kumar@gov.in 9810429065
+KNA_Employee_Detail=Mr. Vinay Panwar vinay.01@fosteringlinux.com 9717791350
+```
+
+ii> Running the playbook for creating facts.d directory and adding above custom-fact to it:
+```
+---
+- hosts: mygroup
+  user: ansible
+  become: yes
+  tasks:
+    - name: creating the facts.d directory
+      action: command mkdir -p /etc/ansible/facts.d
+    - template:
+        src: /etc/ansible/playbooks/basicDetails
+        dest: /etc/ansible/facts.d/basicDetails.fact
+...
+```
+
+iii> Verifying content of custom-fact at nodes:
+```
+ ansible  -m command -a "cat /etc/ansible/facts.d/basicDetails.fact"
+```
+
+iv> Running `ansible mygroup -m setup | less` & searching using `/ansible_local`:
+```
+        "ansible_local": {
+            "basicDetails": {
+                "BASIC": {
+                    "client": "NIC",
+                    "data_center": "DC-Delhi",
+                    "project": "Shiksha_Portal"
+                }
+            }
+        },
+```
+
+v> Modifying `ims.tpl` columns by adding fields from the new fact files:
+```
+
+```
+
+vi> Running `ansible mygroup -m setup --tree /home/ansible/ansible` for saving & then running `ansible-cmdb -t ims.tpl /home/ansible/ansible > data.csv`
+
+________________________________________________________________
+
+### 2. The process of creating AUTO custom facts include:
+
+- **Requirement: Should be able to find specific things like Version, Name, Last Updated, etc. without manually adding their details.**
+
+- Playbook for getting custom-facts AUTO without mentioning their values. Now we create a playbook for **automating** retrieving custom facts on each node as custom-facts 
+
+Note to self: Need to understand how to not manually create custom-facts.
