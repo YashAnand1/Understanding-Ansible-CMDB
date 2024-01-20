@@ -529,7 +529,7 @@ Basic steps are as follows:
 - mkdir -p /etc/ansible/facts.d
 - vim /etc/ansible/facts.d/httpd.fact // Fact extension important
 '''
-# use ini syntax instead of yaml
+# use dictionary or JSON syntax instead of yaml
 [basic]
 package=httpd
 service=httpd
@@ -664,6 +664,7 @@ v> Modifying `ims.tpl` columns by adding fields from the new fact files:
   {"title": "LOCATION", "id": "location", "visible": True, "field": lambda h: host['ansible_facts'].get('ansible_local', {}).get('basic_details', {}).get('basic', {}).get('data_center', '')},
   {"title": "OWNER_CONCTACT_DETAIL", "id": "owner_contact_detail", "visible": True, "field": lambda h: host['ansible_facts'].get('ansible_local', {}).get('basic_details', {}).get('basic', {}).get('owner_contact_detail', '')},
   {"title": "KNA_Employee_Detail", "id": "kna_employee_detail", "visible": True, "field": lambda h: host['ansible_facts'].get('ansible_local', {}).get('basic_details', {}).get('basic', {}).get('kna_employee_detail', '')},
+
 ```
 
 vi> Running `ansible mygroup -m setup --tree /home/ansible/ansible` for saving & then running `ansible-cmdb -t ims.tpl /home/ansible/ansible > data.csv`
@@ -677,3 +678,11 @@ ________________________________________________________________
 - Playbook for getting custom-facts AUTO without mentioning their values. Now we create a playbook for **automating** retrieving custom facts on each node as custom-facts 
 
 Note to self: Need to understand how to not manually create custom-facts.
+
+**My Plan**
+- Write a playbook to do the following:
+- - Get inventory details
+- - Convert output into JSON
+- - Save JSON file as '/etc/ansible/facts.d/data_fact'
+
+**Working **
