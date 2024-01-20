@@ -55,10 +55,9 @@ ansible -m setup --user=root --tree output/ all --ask-pass`
 ![img](https://i.imgur.com/6f4b4V8.png)
 - By default, the `html_fancy` format is used for generating fancy html overview of configurations from out directory.
 - When we don't specify the format, ansible-cmdb generates overview automatically as `html_fancy` using `ansible-cmdb --template html_fancy out/ > abcd.html` - `--template html_fancy` secretly added auto if not mentioned.
-- 
 
 ## Using Templates For Other Formats
-From the [Ansible-CMDB Documentation](https://ansible-cmdb.readthedocs.io/en/latest/usage/) command:
+From the [Ansible-CMDB Documentation](https://ansible-cmdb.readthedocs.io/en/latest/usage/):
 ```
 html_fancy: A dynamic, modern HTML page containing all hosts. **USED AS DEFAULT!!**
 html_fancy_split: A dynamic, modern HTML page with each host's details in a separate file.
@@ -674,14 +673,98 @@ ________________________________________________________________
 
 - **Requirement: Should be able to find specific things like Version, Name, Last Updated, etc. without manually adding their details.**
 
-- Playbook for getting custom-facts AUTO without mentioning their values. Now we create a playbook for **automating** retrieving custom facts on each node as custom-facts 
+- Playbook for getting custom-facts AUTO without mentioning their values. Now we create a playbook for **automating** retrieving custom facts on each node as custom-facts.
 
-Note to self: Need to understand how to not manually create custom-facts.
-
-**My Plan**
+**My Initial Plan:**
 - Write a playbook to do the following:
 - - Get inventory details
 - - Convert output into JSON
 - - Save JSON file as '/etc/ansible/facts.d/data_fact'
 
-**Working **
+Although it could have been a way to achieve the requirement, **I was able to understand through [this article](https://www.golinuxcloud.com/ansible-facts/)** that I can simply add a script as a fact file, which was not mentioned or described in the resources mentioned so far, which only relied on manually creating the facts file as a dictionary.
+
+**Current Plan:**
+- Create a script that retrieves information
+- Using a playbook to move it to Ansible-Nodes
+- Facts stored in /etc/ansible/etc/facts.d
+
+
+**Steps Followed**
+
+i> I created an executable fact file for finding the python version in Ansible-Nodes:
+
+```
+python_ver=$(python3 --version | cut -d' ' -f2)
+
+cat << EOF
+{ "Python_version": "${python_ver}" }
+EOF
+```
+
+ii> Then I modified the current Ansible-Playbook to move the new fact file with Ansible user and 700 executable permission set:
+```
+---
+- hosts: mygroup
+  user: ansible
+  become: yes
+  tasks:
+    - name: creating the facts.d directory
+      action: command mkdir -p /etc/ansible/facts.d
+
+    - name: adding basic details facts
+      template:
+        src: /etc/ansible/playbooks/ims/basic_details.fact
+        dest: /etc/ansible/facts.d/basic_details.fact
+
+    - name: adding auto facts
+      template:
+        src: /etc/ansible/playbooks/ims/auto.fact
+        dest: /etc/ansible/facts.d/auto.fact
+    
+    - name: changing permissions
+      action: command chmod 700 /etc/ansible/facts.d/auto.fact
+
+    - name: changing user
+      action: command chown ansible /etc/ansible/facts.d/auto.fact
+```
+
+iii> Verfied the move and the content of the fact-file:
+```
+ansible mygroup -m command -a "ls -lrth /etc/ansible/facts.d/" 
+
+192.168.122.159 | CHANGED | rc=0 >>
+total 8.0K
+-rw-r--r-- 1 root    root 210 Jan 19 16:19 basic_details.fact
+-rwx------ 1 ansible root 115 Jan 20 14:50 auto.fact
+192.168.122.6 | CHANGED | rc=0 >>
+total 8.0K
+-rw-r--r-- 1 root    root 210 Jan 19 16:19 basic_details.fact
+-rwx------ 1 ansible root 115 Jan 20 14:50 auto.fact
+```
+
+iv> Retrieved the Ansible-Fact using `ansible mygroup -m setup | less`and found custom-facts using `/ansible_local`:
+```
+        "ansible_local": {
+            "auto": {
+                "Python_version": "3.10.12"
+            },
+            "basic_details": {
+                "basic": {
+                    "client": "NIC",
+                    "data_center": "DC-Delhi",
+                    "kna_employee_detail": "Mr. Vinay Panwar vinay.01@fosteringlinux.com 9717791350",
+                    "owner_contact_detail": "Mr. Ashwani Kumar ashwani.kumar@gov.in 9810429065",
+                    "project": "Shiksha_Portal"
+                }
+            }
+        }, 
+```
+Using this method of creating executable fact-files, I was able to get the specific details related to the server. 
+
+v> In order to retrieve this detail in the Ansible-CMDB file, I modified the 'ims.tpl' template file to also store the information of language version under the **Programming_Language_Version** column. **NOTE: The actual column =/= Prog Lang in server. This was only for testing purposes.**
+
+The modification to the `/usr/local/lib/ansiblecmdb/data/tpl/ims.tpl` was done in the following way:
+```
+  {"title": "PROGRAMMING_LANGUAGE_VERSION", "id": "programming_language_version", "visible": True, "field": lambda h: host['ansible_facts'].get('ansible_local', {}).get('auto', {}).get('Python_version', '')},
+```
+`````````````````````````                                                                           `               
