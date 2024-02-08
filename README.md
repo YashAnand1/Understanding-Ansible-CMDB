@@ -248,7 +248,8 @@ $ vi out_manual/win.dev.local
 ```
 
 ## Custom Facts 
-> custom facts added will be displayed under 'custom facts' header in html fancy. Not same as host local facts which are read by ansible from /etc/ansible/facts.d directory. custom facts explained here are manually defined on the host where you run ansible-cmdb, and have little to do with Ansible itself.
+> custom facts added will be displayed under 'custom facts' header in html fancy. Not same as host local facts which are read by ansible from /etc/ansible/facts.d directory. custom facts explained here are manually defined on the host where you run ansible-cmdb, and have little to do with Ansible itself. **If you prefer a different directory, create it and specify it using the fact_path play keyword. **
+
 
 UseCase: 
 Let's say you want to add information about installed software to your facts.
