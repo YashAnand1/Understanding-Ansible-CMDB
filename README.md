@@ -30,8 +30,6 @@ Step 1: Download Ansible-CMDB:
 Step 2: Install Ansible-CMDB:
 - unzip ansible-cmdb-1.30.zip
 - cd ansible-cmdb-1.30
-- yum install python-pip -y
-
 - pip install ansible-cmdb --break-system-packages -->install
 
 **NOTE**: I referred to the GitHub ReadMe from [here](https://github.com/fboender/ansible-cmdb/tree/1.31)
